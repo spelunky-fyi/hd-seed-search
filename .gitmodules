@@ -1,0 +1,3 @@
+[submodule "3rdparty/HDDLL"]
+	path = 3rdparty/HDDLL
+	url = https://github.com/spelunky-fyi/HDDLL.git

@@ -52,7 +52,8 @@ build/Release/hd-seed-search.exe seeds.txt out.jsonl 13
 `out.jsonl` gets one line per seed as each is generated, with each level's
 layout (room types, entrance and exit rooms) and the things the seed search
 looks for: crate contents, shop items, a prize wheel's prize, shopkeeper,
-altar, damsel, worm tongue, moai, the black market entrance and Anubis.
+altar, damsel, worm tongue, moai, the black market entrance, Anubis,
+lavafalls and hired hands for sale.
 `out.jsonl.log` has timings and any crash.
 
 Setting `SEED_SEARCH_ENTITIES=1` also lists every active entity on each level
@@ -71,4 +72,5 @@ Python scripts for development. Neither is needed to build or run it.
 - Windows only, and needs the Steam version of `Spelunky.exe` the offsets are
   for. The hook checks the bytes it patches and stops on a different exe.
 - Levels are generated as a run that takes no special exits (worm, black
-  market, mothership, ...).
+  market, mothership, ...), except that lavafalls scouted in 4-3 are always
+  the city of gold version of the level.

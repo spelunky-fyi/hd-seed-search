@@ -350,6 +350,18 @@ static LONG CALLBACK onException(EXCEPTION_POINTERS *info) {
 
 // Generation
 
+static uint32_t countActiveEntities(hddll::GlobalState *state,
+                                    uint32_t entityType) {
+  uint32_t count = 0;
+  for (size_t idx = 0; idx < state->entities->entities_active_count; idx++) {
+    auto ent = state->entities->entities_active[idx];
+    if (ent && ent->entity_type == entityType) {
+      count++;
+    }
+  }
+  return count;
+}
+
 static bool hasActiveEntity(hddll::GlobalState *state, uint32_t entityType) {
   for (size_t idx = 0; idx < state->entities->entities_active_count; idx++) {
     auto ent = state->entities->entities_active[idx];
@@ -488,6 +500,21 @@ static std::string describeLevel(hddll::GlobalState *state) {
   std::vector<uint32_t> rooms(std::begin(levelState->room_types),
                               std::end(levelState->room_types));
 
+  // Hired hands for sale: the player entities standing in a hired hand shop
+  // room (106, or 10106 facing the other way). The player isn't in one.
+  uint32_t hiredHands = 0;
+  for (size_t idx = 0; idx < state->entities->entities_active_count; idx++) {
+    auto ent = state->entities->entities_active[idx];
+    if (!ent || ent->entity_kind != hddll::EntityKind::KIND_PLAYER) {
+      continue;
+    }
+    auto room = getRoomForPosition(ent->x, ent->y);
+    if (room < 48 && (levelState->room_types[room] == 106 ||
+                      levelState->room_types[room] == 10106)) {
+      hiredHands++;
+    }
+  }
+
   // SEED_SEARCH_ENTITIES=1 adds every active entity, for working out what to
   // look for
   std::string all;
@@ -512,18 +539,27 @@ static std::string describeLevel(hddll::GlobalState *state) {
       "{{\"level\":{},\"crates\":[{}],\"shop\":[{}],\"prizeWheelItem\":{},"
       "\"shopkeeper\":{},"
       "\"altar\":{},\"damsel\":{},\"wormTongue\":{},\"moai\":{},"
-      "\"blackMarket\":{},\"anubis\":[{}],"
+      "\"blackMarket\":{},\"anubis\":[{}],\"lavafalls\":{},\"cityOfGold\":{},"
+      "\"hiredHands\":{},"
       "\"rooms\":[{}],\"entrance\":[{},{}],\"exit\":[{},{}],"
       "\"dark\":{},\"entities\":{}{}}}",
       state->level, joinNumbers(crates), joinNumbers(shopItems), prizeWheelItem,
       jsonBool(hasActiveEntity(state, 1006)),
       jsonBool(hasFloorEntity(state, 35)), jsonBool(state->damsel_spawned),
       jsonBool(hasActiveEntity(state, 174)), jsonBool(state->moai_spawned),
-      blackMarket, anubis, joinNumbers(rooms), levelState->entrance_room_x,
+      blackMarket, anubis,
+      // Lava/Water Spouts, which on the temple and hell levels are the
+      // lavafalls over lava pools
+      countActiveEntities(state, 243), jsonBool(state->is_city_of_gold),
+      hiredHands, joinNumbers(rooms),
+      levelState->entrance_room_x,
       levelState->entrance_room_y, levelState->exit_room_x,
       levelState->exit_room_y, state->dark_level,
       state->entities->entities_active_count, all);
 }
+
+// 4-3
+const uint32_t CITY_OF_GOLD_LEVEL = 15;
 
 // GlobalState field, non-zero between level setup's two calls
 const DWORD LEVEL_SETUP_PHASE = 0x4459BC;
@@ -583,6 +619,12 @@ static std::string generateSeed(uint32_t seed, uint32_t levels) {
     if (level > 1) {
       callResetForLevel(state);
       state->level = level - 1;
+    }
+    // 4-3 is the City of Gold, as if 4-2's alternate entrance was taken.
+    // Setting the flag after the reset (which clears it) is enough for the
+    // level to be generated as it, and the levels after are unchanged.
+    if (level == CITY_OF_GOLD_LEVEL) {
+      state->is_city_of_gold = 1;
     }
     // Level setup runs over two updates. The first moves on to the next
     // level number and sets LEVEL_SETUP_PHASE, the second generates it.
